@@ -1,0 +1,590 @@
+```html
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+  <meta name="apple-mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+  <meta name="apple-mobile-web-app-title" content="Для зайчика" />
+  <meta name="theme-color" content="#ffb6d5" />
+
+  <link rel="manifest" href="manifest.json" />
+
+  <title>Змейка для зайчика 💗</title>
+
+  <style>
+    * {
+      box-sizing: border-box;
+      -webkit-tap-highlight-color: transparent;
+      user-select: none;
+    }
+
+    body {
+      margin: 0;
+      min-height: 100vh;
+      min-height: 100dvh;
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      background:
+        radial-gradient(circle at top, #ffe6f1 0%, #ffc5dd 45%, #f49ac2 100%);
+      color: #7a234c;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      overflow: hidden;
+      touch-action: none;
+    }
+
+    .game-wrap {
+      width: 100%;
+      max-width: 500px;
+      padding:
+        max(24px, env(safe-area-inset-top))
+        20px
+        max(24px, env(safe-area-inset-bottom));
+      text-align: center;
+    }
+
+    h1 {
+      margin: 0 0 8px;
+      font-size: 30px;
+      font-weight: 800;
+      color: #a82f67;
+      text-shadow: 0 2px 0 rgba(255,255,255,.5);
+    }
+
+    .subtitle {
+      margin-bottom: 15px;
+      font-size: 14px;
+      color: #a94a77;
+    }
+
+    .score-card {
+      display: inline-block;
+      margin-bottom: 15px;
+      padding: 10px 16px;
+      border-radius: 999px;
+      background: rgba(255, 255, 255, 0.55);
+      box-shadow:
+        0 8px 25px rgba(133, 30, 78, 0.12),
+        inset 0 1px 0 rgba(255,255,255,.7);
+      backdrop-filter: blur(10px);
+      font-size: 17px;
+      font-weight: 700;
+    }
+
+    .canvas-wrap {
+      position: relative;
+    }
+
+    canvas {
+      width: 100%;
+      aspect-ratio: 1 / 1;
+      display: block;
+      border-radius: 28px;
+      background: rgba(255, 244, 249, 0.88);
+      box-shadow:
+        0 20px 50px rgba(117, 22, 67, .2),
+        inset 0 0 0 2px rgba(255, 255, 255, .7);
+    }
+
+    .love-message {
+      position: absolute;
+      inset: 0;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 30px;
+      border-radius: 28px;
+      background: rgba(255, 225, 238, .88);
+      backdrop-filter: blur(8px);
+      opacity: 0;
+      pointer-events: none;
+      transition: opacity .35s ease;
+    }
+
+    .love-message.show {
+      opacity: 1;
+    }
+
+    .love-box {
+      animation: pop .5s ease;
+    }
+
+    .love-heart {
+      font-size: 56px;
+      margin-bottom: 10px;
+    }
+
+    .love-text {
+      font-size: 28px;
+      line-height: 1.2;
+      font-weight: 900;
+      color: #b42768;
+      text-shadow: 0 2px 0 white;
+    }
+
+    @keyframes pop {
+      0% {
+        transform: scale(.65);
+        opacity: 0;
+      }
+
+      70% {
+        transform: scale(1.08);
+      }
+
+      100% {
+        transform: scale(1);
+        opacity: 1;
+      }
+    }
+
+    .message {
+      margin-top: 14px;
+      min-height: 24px;
+      font-size: 16px;
+      font-weight: 700;
+      color: #8d315d;
+    }
+
+    button {
+      margin-top: 10px;
+      border: none;
+      border-radius: 16px;
+      padding: 13px 22px;
+      font-size: 17px;
+      font-weight: 800;
+      color: white;
+      background: linear-gradient(135deg, #e75492, #c92f74);
+      box-shadow: 0 10px 25px rgba(166, 38, 97, .25);
+      cursor: pointer;
+    }
+
+    button:active {
+      transform: scale(.97);
+    }
+
+    .hint {
+      margin-top: 15px;
+      font-size: 13px;
+      color: #9f5276;
+    }
+  </style>
+</head>
+
+<body>
+
+<div class="game-wrap">
+  <h1>Для моего зайчика 💗</h1>
+
+  <div class="subtitle">
+    Собирай сердечки и не врезайся 🐍
+  </div>
+
+  <div class="score-card">
+    Счёт: <span id="score">0</span>
+    · Рекорд: <span id="best">0</span>
+  </div>
+
+  <div class="canvas-wrap">
+    <canvas id="game"></canvas>
+
+    <div class="love-message" id="loveMessage">
+      <div class="love-box">
+        <div class="love-heart">💗</div>
+        <div class="love-text">
+          Люблю тебя,<br>
+          зайчик &lt;3
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="message" id="message"></div>
+
+  <button id="restart">Играть ещё 💕</button>
+
+  <div class="hint">
+    Управление свайпами
+  </div>
+</div>
+
+<script>
+const canvas = document.getElementById("game");
+const ctx = canvas.getContext("2d");
+
+const scoreEl = document.getElementById("score");
+const bestEl = document.getElementById("best");
+const messageEl = document.getElementById("message");
+const restartBtn = document.getElementById("restart");
+const loveMessage = document.getElementById("loveMessage");
+
+const gridSize = 20;
+
+let snake;
+let food;
+let dx;
+let dy;
+let nextDx;
+let nextDy;
+let score;
+let gameLoop;
+let gameOver;
+let loveShown = false;
+
+let best = Number(localStorage.getItem("snakeBest") || 0);
+bestEl.textContent = best;
+
+function resizeCanvas() {
+  const size = Math.min(window.innerWidth - 40, 460);
+  const dpr = window.devicePixelRatio || 1;
+
+  canvas.style.width = size + "px";
+  canvas.style.height = size + "px";
+
+  canvas.width = size * dpr;
+  canvas.height = size * dpr;
+
+  ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+}
+
+function randomFood() {
+  let newFood;
+
+  do {
+    newFood = {
+      x: Math.floor(Math.random() * gridSize),
+      y: Math.floor(Math.random() * gridSize)
+    };
+  } while (
+    snake.some(segment =>
+      segment.x === newFood.x &&
+      segment.y === newFood.y
+    )
+  );
+
+  return newFood;
+}
+
+function startGame() {
+  clearInterval(gameLoop);
+
+  snake = [
+    { x: 10, y: 10 },
+    { x: 9, y: 10 },
+    { x: 8, y: 10 }
+  ];
+
+  dx = 1;
+  dy = 0;
+
+  nextDx = 1;
+  nextDy = 0;
+
+  score = 0;
+  gameOver = false;
+  loveShown = false;
+
+  scoreEl.textContent = score;
+  messageEl.textContent = "";
+  loveMessage.classList.remove("show");
+
+  food = randomFood();
+
+  gameLoop = setInterval(update, 110);
+
+  draw();
+}
+
+function update() {
+  if (gameOver) return;
+
+  dx = nextDx;
+  dy = nextDy;
+
+  const head = {
+    x: snake[0].x + dx,
+    y: snake[0].y + dy
+  };
+
+  if (
+    head.x < 0 ||
+    head.x >= gridSize ||
+    head.y < 0 ||
+    head.y >= gridSize ||
+    snake.some(segment =>
+      segment.x === head.x &&
+      segment.y === head.y
+    )
+  ) {
+    endGame();
+    return;
+  }
+
+  snake.unshift(head);
+
+  if (head.x === food.x && head.y === food.y) {
+    score++;
+    scoreEl.textContent = score;
+
+    if (score > best) {
+      best = score;
+      bestEl.textContent = best;
+      localStorage.setItem("snakeBest", best);
+    }
+
+    food = randomFood();
+
+    if (score === 100 && !loveShown) {
+      showLoveMessage();
+    }
+  } else {
+    snake.pop();
+  }
+
+  draw();
+}
+
+function drawHeart(cx, cy, size) {
+  ctx.save();
+
+  ctx.translate(cx, cy);
+  ctx.scale(size / 30, size / 30);
+
+  ctx.beginPath();
+
+  ctx.moveTo(0, 9);
+
+  ctx.bezierCurveTo(
+    -18, -4,
+    -17, -18,
+    -7, -18
+  );
+
+  ctx.bezierCurveTo(
+    -1, -18,
+    0, -12,
+    0, -9
+  );
+
+  ctx.bezierCurveTo(
+    0, -12,
+    1, -18,
+    7, -18
+  );
+
+  ctx.bezierCurveTo(
+    17, -18,
+    18, -4,
+    0, 9
+  );
+
+  ctx.fill();
+
+  ctx.restore();
+}
+
+function draw() {
+  const size = canvas.clientWidth;
+  const cell = size / gridSize;
+
+  ctx.clearRect(0, 0, size, size);
+
+  ctx.fillStyle = "rgba(255, 245, 249, 0.95)";
+  ctx.fillRect(0, 0, size, size);
+
+  ctx.strokeStyle = "rgba(210, 68, 130, 0.07)";
+  ctx.lineWidth = 1;
+
+  for (let i = 0; i <= gridSize; i++) {
+    ctx.beginPath();
+    ctx.moveTo(i * cell, 0);
+    ctx.lineTo(i * cell, size);
+    ctx.stroke();
+
+    ctx.beginPath();
+    ctx.moveTo(0, i * cell);
+    ctx.lineTo(size, i * cell);
+    ctx.stroke();
+  }
+
+  const foodCenterX = food.x * cell + cell / 2;
+  const foodCenterY = food.y * cell + cell / 2;
+
+  ctx.fillStyle = "#e83e7f";
+  ctx.shadowColor = "rgba(232, 62, 127, .35)";
+  ctx.shadowBlur = 10;
+
+  drawHeart(
+    foodCenterX,
+    foodCenterY,
+    cell * 0.95
+  );
+
+  ctx.shadowBlur = 0;
+
+  snake.forEach((segment, index) => {
+    const x = segment.x * cell;
+    const y = segment.y * cell;
+
+    ctx.fillStyle = index === 0
+      ? "#d9367d"
+      : "#f06ca5";
+
+    const padding = cell * 0.08;
+
+    ctx.beginPath();
+    ctx.roundRect(
+      x + padding,
+      y + padding,
+      cell - padding * 2,
+      cell - padding * 2,
+      cell * 0.32
+    );
+
+    ctx.fill();
+
+    if (index === 0) {
+      ctx.fillStyle = "#ffffff";
+
+      const eyeSize = cell * 0.08;
+
+      let eye1;
+      let eye2;
+
+      if (dx === 1) {
+        eye1 = [x + cell * .72, y + cell * .32];
+        eye2 = [x + cell * .72, y + cell * .68];
+      } else if (dx === -1) {
+        eye1 = [x + cell * .28, y + cell * .32];
+        eye2 = [x + cell * .28, y + cell * .68];
+      } else if (dy === -1) {
+        eye1 = [x + cell * .32, y + cell * .28];
+        eye2 = [x + cell * .68, y + cell * .28];
+      } else {
+        eye1 = [x + cell * .32, y + cell * .72];
+        eye2 = [x + cell * .68, y + cell * .72];
+      }
+
+      ctx.beginPath();
+      ctx.arc(eye1[0], eye1[1], eyeSize, 0, Math.PI * 2);
+      ctx.arc(eye2[0], eye2[1], eyeSize, 0, Math.PI * 2);
+      ctx.fill();
+    }
+  });
+}
+
+function showLoveMessage() {
+  loveShown = true;
+  loveMessage.classList.add("show");
+
+  clearInterval(gameLoop);
+
+  setTimeout(() => {
+    loveMessage.classList.remove("show");
+
+    if (!gameOver) {
+      gameLoop = setInterval(update, 110);
+    }
+  }, 3500);
+}
+
+function endGame() {
+  gameOver = true;
+  clearInterval(gameLoop);
+
+  messageEl.textContent =
+    `Ой 😭 Но ты всё равно мой зайчик 💗 Счёт: ${score}`;
+}
+
+restartBtn.addEventListener("click", startGame);
+
+let touchStartX = 0;
+let touchStartY = 0;
+
+document.addEventListener("touchstart", e => {
+  const touch = e.changedTouches[0];
+
+  touchStartX = touch.clientX;
+  touchStartY = touch.clientY;
+}, { passive: false });
+
+document.addEventListener("touchmove", e => {
+  e.preventDefault();
+}, { passive: false });
+
+document.addEventListener("touchend", e => {
+  const touch = e.changedTouches[0];
+
+  const diffX = touch.clientX - touchStartX;
+  const diffY = touch.clientY - touchStartY;
+
+  if (
+    Math.abs(diffX) < 25 &&
+    Math.abs(diffY) < 25
+  ) {
+    return;
+  }
+
+  if (Math.abs(diffX) > Math.abs(diffY)) {
+    if (diffX > 0 && dx !== -1) {
+      nextDx = 1;
+      nextDy = 0;
+    }
+
+    if (diffX < 0 && dx !== 1) {
+      nextDx = -1;
+      nextDy = 0;
+    }
+  } else {
+    if (diffY > 0 && dy !== -1) {
+      nextDx = 0;
+      nextDy = 1;
+    }
+
+    if (diffY < 0 && dy !== 1) {
+      nextDx = 0;
+      nextDy = -1;
+    }
+  }
+});
+
+document.addEventListener("keydown", e => {
+  if (e.key === "ArrowUp" && dy !== 1) {
+    nextDx = 0;
+    nextDy = -1;
+  }
+
+  if (e.key === "ArrowDown" && dy !== -1) {
+    nextDx = 0;
+    nextDy = 1;
+  }
+
+  if (e.key === "ArrowLeft" && dx !== 1) {
+    nextDx = -1;
+    nextDy = 0;
+  }
+
+  if (e.key === "ArrowRight" && dx !== -1) {
+    nextDx = 1;
+    nextDy = 0;
+  }
+});
+
+window.addEventListener("resize", () => {
+  resizeCanvas();
+  draw();
+});
+
+if ("serviceWorker" in navigator) {
+  navigator.serviceWorker.register("./sw.js");
+}
+
+resizeCanvas();
+startGame();
+</script>
+
+</body>
+</html>
+```

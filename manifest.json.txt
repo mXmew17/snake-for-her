@@ -1,0 +1,11 @@
+```json
+{
+  "name": "Змейка для зайчика",
+  "short_name": "Для зайчика 💗",
+  "start_url": "./",
+  "display": "standalone",
+  "background_color": "#ffc5dd",
+  "theme_color": "#ffb6d5",
+  "orientation": "portrait"
+}
+```
